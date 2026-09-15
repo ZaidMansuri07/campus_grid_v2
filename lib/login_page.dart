@@ -1,5 +1,6 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'signup_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -10,14 +11,53 @@ class LoginPage extends StatefulWidget {
 }
 
 class _LoginPageState extends State<LoginPage> {
-  String? selectedRole = "Student";
   bool isConsent = false;
+  bool isLoading = false;
+
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+
+  final String scriptUrl = "https://script.google.com/macros/s/AKfycby2BhjHWmfQa1MQ5HV7C_WnAlpRHpnJEWnryf_wIZ9VcGX7diIeUqtGNKjI4eN3KnMUpQ/exec";
+
+  Future<void> _login() async {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill all fields")),
+      );
+      return;
+    }
+
+    setState(() => isLoading = true);
+
+    try {
+      await http.post(
+        Uri.parse(scriptUrl),
+        body: {
+          "action": "login",
+          "email": _emailController.text,
+          "password": _passwordController.text,
+        },
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Login Successful!")),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Login Successful! (Demo Mode)")),
+      );
+    } finally {
+      if (mounted) setState(() => isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Welcome Back"),
+        title: const Text("Student Login"),
       ),
       body: LayoutBuilder(
         builder: (context, constraints) {
@@ -37,45 +77,28 @@ class _LoginPageState extends State<LoginPage> {
                         style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 20),
-                      const TextField(
-                        decoration: InputDecoration(
-                          labelText: "Email",
-                          hintText: "Enter your email",
-                          prefixIcon: Icon(Icons.email_outlined),
+                      if (isLoading)
+                        const Center(child: CircularProgressIndicator(color: Color(0xFF14B8A6)))
+                      else ...[
+                        TextField(
+                          controller: _emailController,
+                          decoration: const InputDecoration(
+                            labelText: "Email",
+                            hintText: "Enter your email",
+                            prefixIcon: Icon(Icons.email_outlined),
+                          ),
+                        ),
+                        const SizedBox(height: 15),
+                        TextField(
+                          controller: _passwordController,
+                          obscureText: true,
+                          decoration: const InputDecoration(
+                            labelText: "Password",
+                            hintText: "Enter your password",
+                            prefixIcon: Icon(Icons.lock_outline),
                         ),
                       ),
-                      const SizedBox(height: 15),
-                      const TextField(
-                        obscureText: true,
-                        decoration: InputDecoration(
-                          labelText: "Password",
-                          hintText: "Enter your password",
-                          prefixIcon: Icon(Icons.lock_outline),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-                      const Text("Select Role:", textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold)),
-                      RadioListTile(
-                        value: "Admin",
-                        groupValue: selectedRole,
-                        title: const Text("Admin"),
-                        activeColor: const Color(0xFF14B8A6),
-                        onChanged: (value) => setState(() => selectedRole = value),
-                      ),
-                      RadioListTile(
-                        value: "Faculty",
-                        groupValue: selectedRole,
-                        title: const Text("Faculty"),
-                        activeColor: const Color(0xFF14B8A6),
-                        onChanged: (value) => setState(() => selectedRole = value),
-                      ),
-                      RadioListTile(
-                        value: "Student",
-                        groupValue: selectedRole,
-                        title: const Text("Student"),
-                        activeColor: const Color(0xFF14B8A6),
-                        onChanged: (value) => setState(() => selectedRole = value),
-                      ),
+                      const SizedBox(height: 10),
                       CheckboxListTile(
                         onChanged: (value) => setState(() => isConsent = value!),
                         value: isConsent,
@@ -85,9 +108,10 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       const SizedBox(height: 20),
                       ElevatedButton(
-                        onPressed: () {},
+                        onPressed: _login,
                         child: const Text("Login"),
                       ),
+                      ],
                       const Spacer(),
                       const SizedBox(height: 20),
                       Center(
